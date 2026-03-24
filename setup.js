@@ -19,8 +19,13 @@ async function setup() {
     const encodedPassword = process.env.PASSWORD;
     const password = encodedPassword ? Buffer.from(encodedPassword, 'base64').toString('utf8') : '';
     const sudoExec = (command) => {
-        const fullCommand = `echo "${password}" | sudo -S -p "" ${command}`;
-        return execSync(fullCommand, { stdio: 'inherit' });
+        if (process.platform === 'win32') {
+            const fullCommand = `powershell -Command "Start-Process cmd -ArgumentList '/c ${command}' -Verb RunAs -Wait"`;
+            return execSync(fullCommand, { stdio: 'inherit' });
+        } else {
+            const fullCommand = `echo "${password}" | sudo -S -p "" ${command}`;
+            return execSync(fullCommand, { stdio: 'inherit' });
+        }
     }
 
     if (platform === 'linux') {

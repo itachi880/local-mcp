@@ -15,8 +15,13 @@ const encodedPassword = process.env.PASSWORD;
 const password = encodedPassword ? Buffer.from(encodedPassword, 'base64').toString('utf8') : '';
 
 const sudoExec = (command) => {
-    const fullCommand = `echo "${password}" | sudo -S -p "" ${command}`;
-    return execPromise(fullCommand);
+    if (process.platform === 'win32') {
+        const fullCommand = `powershell -Command "Start-Process cmd -ArgumentList '/c ${command}' -Verb RunAs -Wait"`;
+        return execPromise(fullCommand);
+    } else {
+        const fullCommand = `echo "${password}" | sudo -S -p "" ${command}`;
+        return execPromise(fullCommand);
+    }
 }
 
 

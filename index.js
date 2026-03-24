@@ -5,11 +5,19 @@ const express = require("express");
 const { z } = require("zod");
 const fs = require('fs');
 const path = require('path');
+require('dotenv').config();
 const { exec } = require('child_process');
 const util = require('util');
 const crypto = require('crypto');
-const sudo = require('sudo-prompt');
 const execPromise = util.promisify(exec);
+
+const encodedPassword = process.env.PASSWORD;
+const password = encodedPassword ? Buffer.from(encodedPassword, 'base64').toString('utf8') : '';
+
+const sudoExec = (command) => {
+    const fullCommand = `echo "${password}" | sudo -S -p "" ${command}`;
+    return execPromise(fullCommand);
+}
 
 
 const server = new McpServer({
@@ -119,19 +127,16 @@ server.tool(
     "Run a command in the terminal with sudo",
     { command: z.string().describe("The command to run") },
     async ({ command }) => {
-        return new Promise((resolve) => {
-            sudo.exec(command, { name: 'Local MCP' }, (error, stdout, stderr) => {
-                if (error) {
-                    resolve({
-                        content: [{ type: "text", text: JSON.stringify(error), isError: true }],
-                    });
-                } else {
-                    resolve({
-                        content: [{ type: "text", text: stdout || stderr }],
-                    });
-                }
-            });
-        });
+        try {
+            const { stdout, stderr } = await sudoExec(command);
+            return {
+                content: [{ type: "text", text: stdout || stderr }],
+            };
+        } catch (err) {
+            return {
+                content: [{ type: "text", text: JSON.stringify(err), isError: true }],
+            };
+        }
     }
 );
 

@@ -8,6 +8,7 @@ const path = require('path');
 const { exec } = require('child_process');
 const util = require('util');
 const crypto = require('crypto');
+const sudo = require('sudo-prompt');
 const execPromise = util.promisify(exec);
 
 
@@ -118,16 +119,19 @@ server.tool(
     "Run a command in the terminal with sudo",
     { command: z.string().describe("The command to run") },
     async ({ command }) => {
-        try {
-            const { stdout, stderr } = await execPromise(`sudo ${command}`);
-            return {
-                content: [{ type: "text", text: stdout || stderr }],
-            };
-        } catch (err) {
-            return {
-                content: [{ type: "text", text: JSON.stringify(err), isError: true }],
-            };
-        }
+        return new Promise((resolve) => {
+            sudo.exec(command, { name: 'Local MCP' }, (error, stdout, stderr) => {
+                if (error) {
+                    resolve({
+                        content: [{ type: "text", text: JSON.stringify(error), isError: true }],
+                    });
+                } else {
+                    resolve({
+                        content: [{ type: "text", text: stdout || stderr }],
+                    });
+                }
+            });
+        });
     }
 );
 
